@@ -71,7 +71,9 @@ assert.ok(indexCssSrc.includes('repeat(18, 5px)'), 'CSS must define 18 rows for 
 assert.ok(indexCssSrc.includes('border-radius: 9999px !important;'), 'Holes must have 9999px radius to stay perfectly circular');
 assert.ok(indexCssSrc.includes('speed-knob-dial'), 'CSS must style speed knob dial');
 assert.ok(indexCssSrc.includes('speed-pointer-lever'), 'CSS must style speed pointer lever');
-assert.ok(indexCssSrc.includes('z-index: 95;'), 'Window shadow overlay must be layered on top of LP player');
+assert.ok(indexCssSrc.includes('opacity: 0.38;'), 'Window shadow must have subtle opacity 0.38');
+assert.ok(indexCssSrc.includes('left: 388px;'), 'Tonearm pivot and cradle must be at 388px outside LP');
+assert.ok(indexCssSrc.includes('left: 66px;'), 'Speed knob must be shifted left to 66px away from LP');
 
 // 5. Verify App.tsx Window Shadow
 const appSrc = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8');

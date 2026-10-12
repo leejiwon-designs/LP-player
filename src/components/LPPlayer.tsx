@@ -152,7 +152,7 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
   const timeRemaining = Math.max(0, duration - currentTime);
 
   // Calculated Tonearm Angle:
-  // Stopped (resting in cradle OUTSIDE the LP at x = 378px): 0 deg
+  // Stopped (resting in cradle OUTSIDE the LP at x = 388px): 0 deg
   // Playing (tracking across grooves ON TOP of the LP): 20 deg to 26 deg
   const tonearmAngle = isPlaying
     ? 20 + (duration > 0 ? (currentTime / duration) * 6 : 0)
@@ -257,12 +257,12 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
             </button>
           </div>
 
-          {/* Stationary Tonearm Rest Cradle on Deck (Outside the LP at x = 378px, y = 252px) */}
+          {/* Stationary Tonearm Rest Cradle on Deck (Outside the LP at x = 388px, y = 252px) */}
           <div className="tonearm-rest-cradle" title="Tonearm rest cradle">
             <div className="rest-cradle-notch" />
           </div>
 
-          {/* Arm Holder Circle on Deck (Centered at x = 378px, y = 58px) */}
+          {/* Arm Holder Circle on Deck (Centered at x = 388px, y = 58px) */}
           <div className="tonearm-pivot-base">
             <div className="tonearm-pivot-inner-dark">
               {/* ARM AT THE VERY TOP: Rotating Tonearm Assembly */}

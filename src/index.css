@@ -55,7 +55,7 @@ html, body {
   background-position: center center;
   background-repeat: no-repeat;
   mix-blend-mode: multiply;
-  opacity: 0.58;
+  opacity: 0.38; /* Decreased by ~30% for soft, subtle architectural light */
   pointer-events: none;
   z-index: 95; /* Layered directly on top of LP player chassis & tonearm */
 }
@@ -73,7 +73,7 @@ html, body {
   position: absolute;
   bottom: 100%;
   height: 100vh;
-  left: 373px; /* Centered right above the arm holder circle (378px) */
+  left: 383px; /* Centered right above the arm holder circle (388px) */
   display: flex;
   gap: 9px;
   z-index: 1;
@@ -275,10 +275,10 @@ html, body {
   background: #1e1d21;
 }
 
-/* Stationary Tonearm Rest Cradle Post (Outside LP at x = 378px, y = 252px) */
+/* Stationary Tonearm Rest Cradle Post (Outside LP at x = 388px, y = 252px) */
 .tonearm-rest-cradle {
   position: absolute;
-  left: 378px;
+  left: 388px;
   top: 252px;
   transform: translate(-50%, -50%);
   width: 9px;
@@ -301,11 +301,11 @@ html, body {
   border-radius: 1px;
 }
 
-/* Arm Holder Circle on Deck (Centered at x = 378px, y = 58px) */
+/* Arm Holder Circle on Deck (Centered at x = 388px, y = 58px) */
 .tonearm-pivot-base {
   position: absolute;
   top: 58px;
-  left: 378px;
+  left: 388px;
   transform: translate(-50%, -50%);
   width: 46px;
   height: 46px;
@@ -502,7 +502,7 @@ html, body {
 /* Speed Selector Knob (33 / 45 RPM) - Exact screenshot match */
 .speed-knob-container {
   position: absolute;
-  left: 78px;
+  left: 66px;
   bottom: 42px;
   transform: translate(-50%, 50%);
   z-index: 60;
