@@ -333,7 +333,19 @@ html, body {
   position: relative;
 }
 
-/* The Movable Tonearm Assembly (Z-index 80, centered on pivot origin) */
+/* Fixed Stationary Counterweight & Gimbal Anchor (At pivot center 14px, 14px) */
+.tonearm-fixed-base-anchor {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 75;
+}
+
+/* The Movable Orange Tonearm Assembly (Z-index 80, centered on pivot origin) */
 .tonearm-rotator {
   position: absolute;
   top: 14px;
@@ -342,10 +354,23 @@ html, body {
   height: 0;
   cursor: grab;
   z-index: 80;
+  touch-action: none;
 }
 
 .tonearm-rotator:active {
   cursor: grabbing;
+}
+
+/* Stationary Center Bearing Pin (At pivot center 14px, 14px) */
+.tonearm-center-pin-anchor {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 85;
 }
 
 /* RIGHT SECTION (40% width): LCD + Slats + Perforated Speaker */

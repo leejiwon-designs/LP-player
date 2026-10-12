@@ -404,7 +404,19 @@ const TURNTABLE_CSS = `
   position: relative;
 }
 
-/* The Movable Tonearm Assembly (Z-index 80, centered on pivot origin) */
+/* Fixed Stationary Counterweight & Gimbal Anchor (At pivot center 14px, 14px) */
+.tonearm-fixed-base-anchor {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 75;
+}
+
+/* The Movable Orange Tonearm Assembly (Z-index 80, pivots purely around origin) */
 .tonearm-rotator {
   position: absolute;
   top: 14px;
@@ -413,10 +425,23 @@ const TURNTABLE_CSS = `
   height: 0;
   cursor: grab;
   z-index: 80;
+  touch-action: none;
 }
 
 .tonearm-rotator:active {
   cursor: grabbing;
+}
+
+/* Stationary Center Bearing Pin (At pivot center 14px, 14px) */
+.tonearm-center-pin-anchor {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 85;
 }
 
 /* RIGHT SECTION (40% width): LCD + Slats + Perforated Speaker */
@@ -755,14 +780,24 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
     setSpeedRpm((prev) => (prev === 33 ? 45 : 33));
   }, []);
 
-  const handleArmDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // If dragged to the left (negative offset) towards the LP -> play
-    if (info.offset.x < -10) {
-      handlePlay();
-    } else if (info.offset.x > 10) {
-      // If dragged to the right towards the rest cradle -> pause
-      handlePause();
+  const isPanningRef = useRef<boolean>(false);
+
+  const handleArmPanStart = () => {
+    isPanningRef.current = true;
+  };
+
+  const handleArmPanEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // If flicked or dragged to the left (negative offset or leftward velocity) -> play
+    if (info.offset.x < -10 || info.velocity.x < -100) {
+      if (!isPlaying) handlePlay();
+    } else if (info.offset.x > 10 || info.velocity.x > 100) {
+      // If flicked or dragged to the right (positive offset or rightward velocity) -> pause
+      if (isPlaying) handlePause();
     }
+    // Release pan lock after tiny delay to prevent subsequent click event from toggling
+    setTimeout(() => {
+      isPanningRef.current = false;
+    }, 50);
   };
 
   // 4 Stepped Volume Levels: 100%, 75%, 50%, 25%
@@ -897,20 +932,61 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
           {/* Arm Holder Circle on Deck (Centered at x = 388px, y = 58px) */}
           <div className="tonearm-pivot-base">
             <div className="tonearm-pivot-inner-dark">
-              {/* ARM AT THE VERY TOP: Rotating Tonearm Assembly */}
+              {/* 1. FIXED STATIONARY BASE & COUNTERWEIGHT (Centered at 14px, 14px) */}
+              <div className="tonearm-fixed-base-anchor">
+                <svg
+                  width="60"
+                  height="60"
+                  viewBox="-30 -30 60 60"
+                  className="tonearm-fixed-base-svg"
+                  style={{
+                    position: 'absolute',
+                    left: -30,
+                    top: -30,
+                    width: 60,
+                    height: 60,
+                    overflow: 'visible',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <defs>
+                    {/* Metallic Counterweight Gradient */}
+                    <linearGradient id="counterweightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#45424b" />
+                      <stop offset="40%" stopColor="#2c2a30" />
+                      <stop offset="70%" stopColor="#38353d" />
+                      <stop offset="100%" stopColor="#1e1c20" />
+                    </linearGradient>
+
+                    <filter id="baseShadow" x="-30%" y="-20%" width="160%" height="150%">
+                      <feDropShadow dx="-1" dy="3" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.3" />
+                    </filter>
+                  </defs>
+
+                  <g filter="url(#baseShadow)">
+                    {/* Metallic Counterweight (Extends upward behind pivot axis, stationary) */}
+                    <rect x="-9" y="-22" width="18" height="15" rx="2" fill="url(#counterweightGrad)" stroke="#1a191d" strokeWidth="0.8" />
+                    <line x1="-9" y1="-14" x2="9" y2="-14" stroke="#5d5964" strokeWidth="0.75" />
+
+                    {/* Tonearm Gimbal Center Ring (Stationary socket base, centered at 0, 0) */}
+                    <circle cx="0" cy="0" r="10" fill="#1e1d22" stroke="#3d3a43" strokeWidth="1" />
+                  </g>
+                </svg>
+              </div>
+
+              {/* 2. ROTATING ORANGE TONEARM ASSEMBLY (Only the orange arm rotates, zero translation displacement) */}
               <motion.div
                 className="tonearm-rotator"
                 animate={{ rotate: tonearmAngle }}
                 transition={{ type: 'spring', stiffness: 85, damping: 15 }}
-                drag="x"
-                dragConstraints={{ left: -45, right: 10 }}
-                dragElastic={0.12}
-                onDragEnd={handleArmDragEnd}
+                onPanStart={handleArmPanStart}
+                onPanEnd={handleArmPanEnd}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isPanningRef.current) return;
                   togglePlayPause();
                 }}
-                title={isPlaying ? "Tonearm playing on LP (click or drag right to rest & stop)" : "Tonearm at rest outside LP (click or drag left onto LP to play)"}
+                title={isPlaying ? "Tonearm playing on LP (click or swipe right to rest & stop)" : "Tonearm at rest outside LP (click or swipe left onto LP to play)"}
               >
                 <svg
                   width="90"
@@ -937,14 +1013,6 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
                       <stop offset="100%" stopColor="#bf360c" />
                     </linearGradient>
 
-                    {/* Metallic Counterweight Gradient */}
-                    <linearGradient id="counterweightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#45424b" />
-                      <stop offset="40%" stopColor="#2c2a30" />
-                      <stop offset="70%" stopColor="#38353d" />
-                      <stop offset="100%" stopColor="#1e1c20" />
-                    </linearGradient>
-
                     {/* Cartridge Gradient */}
                     <linearGradient id="cartridgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#2e2b32" />
@@ -958,16 +1026,11 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
                   </defs>
 
                   <g filter="url(#armShadow)">
-                    {/* Metallic Counterweight (extends behind pivot axis) */}
-                    <rect x="-9" y="-22" width="18" height="15" rx="2" fill="url(#counterweightGrad)" stroke="#1a191d" strokeWidth="0.8" />
-                    <line x1="-9" y1="-14" x2="9" y2="-14" stroke="#5d5964" strokeWidth="0.75" />
+                    {/* Orange Root Collar (Smooth pivot under fixed gimbal cap) */}
+                    <circle cx="0" cy="0" r="4.5" fill="#f05523" />
 
-                    {/* Tonearm Gimbal Center Cap (Seamless with pivot holder) */}
-                    <circle cx="0" cy="0" r="10" fill="#1e1d22" stroke="#3d3a43" strokeWidth="1" />
-                    <circle cx="0" cy="0" r="3.5" fill="#b0aba5" stroke="#78746e" strokeWidth="0.5" />
-
-                    {/* Solid Orange Tonearm Tube - Slightly Bigger (5.5px thickness) */}
-                    <rect x="-2.75" y="4" width="5.5" height="194" rx="2.75" fill="url(#tonearmTubeGrad)" />
+                    {/* Solid Orange Tonearm Tube (5.5px thickness) */}
+                    <rect x="-2.75" y="0" width="5.5" height="198" rx="2.75" fill="url(#tonearmTubeGrad)" />
 
                     {/* Cueing Finger Lift tab */}
                     <path
@@ -992,6 +1055,27 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
                   </g>
                 </svg>
               </motion.div>
+
+              {/* 3. STATIONARY BEARING PIN (Centered at 14px, 14px) */}
+              <div className="tonearm-center-pin-anchor">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="-10 -10 20 20"
+                  className="tonearm-center-pin-svg"
+                  style={{
+                    position: 'absolute',
+                    left: -10,
+                    top: -10,
+                    width: 20,
+                    height: 20,
+                    overflow: 'visible',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <circle cx="0" cy="0" r="3.5" fill="#b0aba5" stroke="#78746e" strokeWidth="0.5" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
