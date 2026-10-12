@@ -3,34 +3,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, ExternalLink } from 'lucide-react';
 import LPPlayer from './components/LPPlayer';
 import GlassButton from './components/GlassButton';
-
-const COMPONENT_SNIPPET = `import React from 'react';
-import LPPlayer from './components/LPPlayer';
-
-export default function AudioView() {
-  return (
-    <LPPlayer
-      audioSrc="/audio/ocean-bubbles.mp3"
-      trackName="Ocean Bubble"
-      artist="9jackjack8"
-    />
-  );
-}`;
+import { INSTALL_COMMAND, USAGE_SNIPPET, LP_PLAYER_SINGLE_FILE_CODE } from './data/componentCode';
 
 export const App: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [hasCopiedComponent, setHasCopiedComponent] = useState<boolean>(false);
   const [hasCopiedSnippet, setHasCopiedSnippet] = useState<boolean>(false);
   const [hasCopiedInstall, setHasCopiedInstall] = useState<boolean>(false);
 
-  const copyToClipboard = (text: string, type: 'snippet' | 'install') => {
+  const copyToClipboard = (text: string, type: 'component' | 'snippet' | 'install') => {
     navigator.clipboard.writeText(text);
-    if (type === 'snippet') {
+    if (type === 'component') {
+      setHasCopiedComponent(true);
+      setTimeout(() => setHasCopiedComponent(false), 2200);
+    } else if (type === 'snippet') {
       setHasCopiedSnippet(true);
-      setTimeout(() => setHasCopiedSnippet(false), 2000);
+      setTimeout(() => setHasCopiedSnippet(false), 2200);
     } else {
       setHasCopiedInstall(true);
-      setTimeout(() => setHasCopiedInstall(false), 2000);
+      setTimeout(() => setHasCopiedInstall(false), 2200);
     }
+  };
+
+  const handleMainCopy = () => {
+    copyToClipboard(LP_PLAYER_SINGLE_FILE_CODE, 'component');
+    setIsDrawerOpen(true);
   };
 
   return (
@@ -41,13 +38,13 @@ export const App: React.FC = () => {
       {/* Dramatic Architectural Window & Botanical Foliage Shadow Overlay (On top of player) */}
       <div className="window-shadow-overlay" aria-hidden="true" />
 
-      {/* Floating Glass Copy Button (Clean glass, no dropshadow, Doto font, generous padding) */}
+      {/* Floating Glass Copy Button: 1-Click Copy All-in-One Component Code & Open Drawer */}
       <div className="floating-glass-action">
         <GlassButton
-          onClick={() => setIsDrawerOpen(true)}
+          onClick={handleMainCopy}
           size="default"
         >
-          {hasCopiedSnippet ? 'COPIED CODE!' : 'COPY COMPONENT CODE'}
+          {hasCopiedComponent ? 'COPIED CODE!' : 'COPY COMPONENT CODE'}
         </GlassButton>
       </div>
 
@@ -82,7 +79,7 @@ export const App: React.FC = () => {
                     LP PLAYER
                   </h2>
                   <p className="text-xs text-white mt-1" style={{ fontFamily: "'Inter', sans-serif", opacity: 0.85 }}>
-                    Framer Motion + Web Audio SFX
+                    Single-File Component • Framer Motion + Web Audio
                   </p>
                 </div>
                 <button
@@ -95,7 +92,7 @@ export const App: React.FC = () => {
                 </button>
               </div>
 
-              {/* Drawer Body (All text pure white except orange dots links/titles) */}
+              {/* Drawer Body */}
               <div className="drawer-body" style={{ fontFamily: "'Inter', sans-serif", color: '#ffffff' }}>
                 {/* 1. Quick Install */}
                 <div>
@@ -108,11 +105,10 @@ export const App: React.FC = () => {
                   <div className="code-box">
                     <div className="code-box-header">
                       <span style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>Terminal</span>
-                      {/* Transparent button with white icon & text (NO white wrap) */}
                       <button
                         type="button"
                         className="code-copy-action-btn"
-                        onClick={() => copyToClipboard('npm install framer-motion class-variance-authority lucide-react', 'install')}
+                        onClick={() => copyToClipboard(INSTALL_COMMAND, 'install')}
                       >
                         {hasCopiedInstall ? <Check size={13} color="#ffffff" /> : <Copy size={13} color="#ffffff" />}
                         <span style={{ color: '#ffffff' }}>{hasCopiedInstall ? 'Copied' : 'Copy'}</span>
@@ -120,36 +116,67 @@ export const App: React.FC = () => {
                     </div>
                     <pre className="code-content">
                       <code style={{ fontFamily: "'JetBrains Mono', monospace", color: '#ffffff' }}>
-                        npm install framer-motion class-variance-authority lucide-react
+                        {INSTALL_COMMAND}
                       </code>
                     </pre>
                   </div>
                 </div>
 
-                {/* 2. Usage Code */}
+                {/* 2. Component Code (Single All-in-One File) */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3
+                      className="drawer-section-title-dots"
+                      style={{ fontFamily: "'Doto', monospace", fontWeight: 800, color: '#ff5722', marginBottom: 0 }}
+                    >
+                      2. COMPONENT (LPPlayer.tsx)
+                    </h3>
+                  </div>
+                  <div className="code-box">
+                    <div className="code-box-header">
+                      <span style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>
+                        LPPlayer.tsx (Single-File Drop-in)
+                      </span>
+                      <button
+                        type="button"
+                        className="code-copy-action-btn"
+                        onClick={() => copyToClipboard(LP_PLAYER_SINGLE_FILE_CODE, 'component')}
+                      >
+                        {hasCopiedComponent ? <Check size={13} color="#ffffff" /> : <Copy size={13} color="#ffffff" />}
+                        <span style={{ color: '#ffffff' }}>{hasCopiedComponent ? 'Copied' : 'Copy Code'}</span>
+                      </button>
+                    </div>
+                    <pre className="code-content" style={{ maxHeight: 240 }}>
+                      <code style={{ fontFamily: "'JetBrains Mono', monospace", color: '#ffffff' }}>
+                        {LP_PLAYER_SINGLE_FILE_CODE}
+                      </code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* 3. Usage Code */}
                 <div>
                   <h3
                     className="drawer-section-title-dots"
                     style={{ fontFamily: "'Doto', monospace", fontWeight: 800, color: '#ff5722' }}
                   >
-                    2. USAGE
+                    3. USAGE
                   </h3>
                   <div className="code-box">
                     <div className="code-box-header">
-                      <span style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>AudioView.tsx</span>
-                      {/* Transparent button with white icon & text (NO white wrap) */}
+                      <span style={{ color: '#ffffff', fontFamily: "'JetBrains Mono', monospace" }}>AudioPage.tsx</span>
                       <button
                         type="button"
                         className="code-copy-action-btn"
-                        onClick={() => copyToClipboard(COMPONENT_SNIPPET, 'snippet')}
+                        onClick={() => copyToClipboard(USAGE_SNIPPET, 'snippet')}
                       >
                         {hasCopiedSnippet ? <Check size={13} color="#ffffff" /> : <Copy size={13} color="#ffffff" />}
                         <span style={{ color: '#ffffff' }}>{hasCopiedSnippet ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
-                    <pre className="code-content">
+                    <pre className="code-content" style={{ maxHeight: 180 }}>
                       <code style={{ fontFamily: "'JetBrains Mono', monospace", color: '#ffffff' }}>
-                        {COMPONENT_SNIPPET}
+                        {USAGE_SNIPPET}
                       </code>
                     </pre>
                   </div>

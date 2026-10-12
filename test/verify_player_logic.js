@@ -75,10 +75,20 @@ assert.ok(indexCssSrc.includes('opacity: 0.38;'), 'Window shadow must have subtl
 assert.ok(indexCssSrc.includes('left: 388px;'), 'Tonearm pivot and cradle must be at 388px outside LP');
 assert.ok(indexCssSrc.includes('left: 66px;'), 'Speed knob must be shifted left to 66px away from LP');
 
-// 5. Verify App.tsx Window Shadow
+// 5. Verify App.tsx Window Shadow & Single-File Component Code
 const appSrc = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8');
 assert.ok(appSrc.includes('window-shadow-overlay'), 'App.tsx must render window-shadow-overlay');
 assert.ok(!appSrc.includes('mouseParallax'), 'Window shadow must not move with cursor');
 assert.ok(fs.existsSync(path.resolve('public/window-shadow.jpg')), 'public/window-shadow.jpg must exist');
+
+// 6. Verify Single-File Component Code Exists and Works
+const componentCodeFile = path.resolve('src/data/componentCode.ts');
+assert.ok(fs.existsSync(componentCodeFile), 'src/data/componentCode.ts must exist');
+const compCodeModule = fs.readFileSync(componentCodeFile, 'utf-8');
+assert.ok(compCodeModule.includes('LP_PLAYER_SINGLE_FILE_CODE'), 'Must export LP_PLAYER_SINGLE_FILE_CODE');
+assert.ok(compCodeModule.includes('INSTALL_COMMAND'), 'Must export INSTALL_COMMAND');
+assert.ok(compCodeModule.includes('USAGE_SNIPPET'), 'Must export USAGE_SNIPPET');
+assert.ok(appSrc.includes('LP_PLAYER_SINGLE_FILE_CODE'), 'App.tsx must import and use LP_PLAYER_SINGLE_FILE_CODE');
+assert.ok(appSrc.includes('copyToClipboard(LP_PLAYER_SINGLE_FILE_CODE'), 'Main button must copy single file code');
 
 console.log('All LP Player self-checks PASSED!');

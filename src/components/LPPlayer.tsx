@@ -1,6 +1,73 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, type PanInfo } from 'framer-motion';
-import { playNeedleDrop, playTactileClick } from '../utils/vinylAudio';
+// Procedural Web Audio API sound synthesis (zero external audio files or dependencies)
+let audioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) audioCtx = new AudioContextClass();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+export function playNeedleDrop(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const oscGain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(140, now);
+  osc.frequency.exponentialRampToValueAtTime(32, now + 0.12);
+  oscGain.gain.setValueAtTime(0.35, now);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.15);
+
+  const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() < 0.08 ? (Math.random() * 2 - 1) : 0) * 0.4;
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(2200, now);
+  filter.Q.setValueAtTime(2.5, now);
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.25, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.start(now + 0.02);
+}
+
+export function playTactileClick(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(650, now);
+  osc.frequency.exponentialRampToValueAtTime(180, now + 0.025);
+  gain.gain.setValueAtTime(0.12, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.035);
+}
+
 
 export interface LPPlayerProps {
   /** Audio track source URL */
@@ -61,6 +128,569 @@ const AnimatedDottedWave: React.FC<{ isPlaying: boolean; volume: number }> = ({ 
     </div>
   );
 };
+
+
+const TURNTABLE_CSS = `
+/* Turntable Container */
+.turntable-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Top Orange Cables: Starting from the very top of the screen (100vh height above player) */
+.top-cables-only {
+  position: absolute;
+  bottom: 100%;
+  height: 100vh;
+  left: 383px; /* Centered right above the arm holder circle (388px) */
+  display: flex;
+  gap: 9px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.top-cable-line {
+  width: 8px; /* Thicker tactile cord */
+  height: 100%;
+  background: linear-gradient(90deg, #ff7e4d 0%, #f05523 45%, #d84315 100%);
+  box-shadow: 0 4px 12px rgba(240, 85, 35, 0.25), 0 2px 6px rgba(0, 0, 0, 0.12);
+  border-radius: 4px 4px 0 0;
+}
+
+/* Main Turntable Chassis */
+.chassis-box {
+  position: relative;
+  z-index: 10;
+  width: 720px;
+  height: 440px;
+  background-color: #f5f0eb;
+  border-radius: 2px;
+  border: 1px solid #e2dad4;
+  box-shadow: 
+    0 32px 70px -15px rgba(25, 20, 30, 0.22),
+    0 16px 30px -12px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(255, 255, 255, 0.95) inset;
+  display: flex;
+  overflow: visible;
+  user-select: none;
+}
+
+/* LEFT SECTION (60% width): Concentric Platter & Tonearm */
+.chassis-left {
+  position: relative;
+  width: 60%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #ded6d0;
+  overflow: visible;
+}
+
+/* Concentric Platter Anchor (Center at 200px, 220px: perfectly center-aligned with tonearm in left deck) */
+.platter-center-anchor {
+  position: absolute;
+  top: 50%;
+  left: 200px;
+  transform: translate(-50%, -50%);
+  width: 350px;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* Spinning Concentric Vinyl Assembly */
+.spinning-vinyl-assembly {
+  position: relative;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+}
+
+/* 1. Underlying Concentric Charcoal / Warm Brown Groove Disc (UNDERNEATH the glass) */
+.black-circles-base {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.charcoal-groove-disc {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #3e3338 0%, #30262b 68%, #241c20 100%);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Micro-grooves texture */
+.vinyl-micro-grooves {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.38;
+  background: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0px,
+    transparent 3px,
+    rgba(255, 255, 255, 0.08) 4px,
+    transparent 5px
+  );
+}
+
+/* Specular reflection sheen */
+.vinyl-specular-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.3;
+  mix-blend-mode: overlay;
+  background: conic-gradient(
+    from 45deg at 50% 50%,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.45) 45deg,
+    transparent 100deg,
+    rgba(255, 255, 255, 0.45) 225deg,
+    transparent 280deg
+  );
+}
+
+/* 2. Underlying Deep Black Center Core Ring (UNDERNEATH the glass) */
+.black-core-ring {
+  position: absolute;
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  background: #1e1c21;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3. Translucent Orange Frosted Glass LP ON TOP (Covers entire 350px disc with genuine glassmorphism) */
+.translucent-lp-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* True Frosted Glassmorphism: semi-transparent peach/frosted glass at bottom, radiant translucent orange at top */
+  background: linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 230, 215, 0.45) 28%,
+    rgba(255, 160, 115, 0.6) 65%,
+    rgba(240, 85, 35, 0.82) 100%
+  );
+  backdrop-filter: blur(5px) saturate(1.15);
+  -webkit-backdrop-filter: blur(5px) saturate(1.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    inset 0 1px 3px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 3px rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* 4. Orange Axis Supporter (On top of the glass LP, underneath the silver axis) */
+.orange-axis-supporter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, #ff6e40 0%, #f05523 75%, #d84315 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  z-index: 40;
+}
+
+/* 5. Center Silver Spindle Axis (On top holding the LP and player together) */
+.center-silver-spindle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #dedcd9 55%, #aba8a5 100%);
+  border: 1px solid #7d7a77;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), inset 0 1px 1px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.center-spindle-pin {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #1e1d21;
+}
+
+/* Stationary Tonearm Rest Cradle Post (Outside LP at x = 388px, y = 252px) */
+.tonearm-rest-cradle {
+  position: absolute;
+  left: 388px;
+  top: 252px;
+  transform: translate(-50%, -50%);
+  width: 9px;
+  height: 15px;
+  background: #ded5cf;
+  border: 1px solid #ccc3bc;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 65;
+  pointer-events: none;
+}
+
+.rest-cradle-notch {
+  width: 5.5px;
+  height: 3px;
+  background: #27252a;
+  border-radius: 1px;
+}
+
+/* Arm Holder Circle on Deck (Centered at x = 388px, y = 58px) */
+.tonearm-pivot-base {
+  position: absolute;
+  top: 58px;
+  left: 388px;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #e8e1dc;
+  border: 1px solid #d8cfc9;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+}
+
+.tonearm-pivot-inner-dark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #27252a;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* The Movable Tonearm Assembly (Z-index 80, centered on pivot origin) */
+.tonearm-rotator {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  cursor: grab;
+  z-index: 80;
+}
+
+.tonearm-rotator:active {
+  cursor: grabbing;
+}
+
+/* RIGHT SECTION (40% width): LCD + Slats + Perforated Speaker */
+.chassis-right {
+  position: relative;
+  width: 40%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f0eb;
+}
+
+/* Slat 1 (Top): Digital LCD Window */
+.lcd-slat-window {
+  height: 66px;
+  background: #18171a;
+  border-bottom: 1px solid #ded5d0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75);
+  user-select: none;
+}
+
+.lcd-meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 175px;
+}
+
+.lcd-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lcd-track-name {
+  font-family: var(--font-doto);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: #ff9470;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lcd-artist-name {
+  font-family: var(--font-doto);
+  font-size: 10px;
+  color: #9d98a6;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lcd-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Countdown in Warm Amber / White */
+.lcd-countdown-digits {
+  font-family: var(--font-doto);
+  font-weight: 900;
+  font-size: 16px;
+  color: #ff9470;
+  line-height: 1;
+}
+
+.lcd-status-label {
+  font-family: var(--font-doto);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: #726e7a;
+  margin-top: 3px;
+}
+
+/* 4 White Skeuomorphic Slats (All clean flush white by default) */
+.slats-fader-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeuo-slat-bar {
+  width: 100%;
+  height: 38px;
+  background: #fdfbf9;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #ddd5cf;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+}
+
+.skeuo-slat-bar:hover {
+  background: #f7f2ed;
+}
+
+.skeuo-slat-bar:active {
+  background: #eae2dc;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.16);
+  transform: translateY(1px);
+}
+
+/* Perforated White Speaker Grille Panel (Expanded 24 cols × 18 rows grid with less corner margins) */
+.speaker-perforated-panel {
+  flex: 1;
+  width: 100%;
+  background-color: #f5f0eb;
+  border-top: 1px solid #dcd4ce;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 12px 14px;
+}
+
+/* 24 Columns × 18 Rows of Circular Holes */
+.perforated-holes-grid-centered {
+  display: grid;
+  grid-template-columns: repeat(24, 5px);
+  grid-template-rows: repeat(18, 5px);
+  gap: 5.5px;
+  place-content: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.speaker-hole-circle {
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
+  min-height: 5px;
+  max-width: 5px;
+  max-height: 5px;
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px !important;
+  flex-shrink: 0;
+  display: block;
+  box-sizing: border-box;
+  background-color: #1a191d;
+  box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.95), 0 0.5px 1px rgba(255, 255, 255, 0.6);
+}
+
+/* Speed Selector Knob (33 / 45 RPM) - Exact screenshot match */
+.speed-knob-container {
+  position: absolute;
+  left: 66px;
+  bottom: 42px;
+  transform: translate(-50%, 50%);
+  z-index: 60;
+  user-select: none;
+}
+
+.speed-knob-dial {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+/* Thin Hairline Circle Outline */
+.speed-dial-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid #cdc6be;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* Stations for 33 and 45 */
+.speed-dial-station {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 3.5px;
+  pointer-events: none;
+}
+
+/* 33 RPM: Upper-right arc (~ -35 deg) */
+.station-33 {
+  left: 49px;
+  top: 7px;
+}
+
+.station-33 .speed-station-tick {
+  width: 6px;
+  height: 1px;
+  background-color: #9e968f;
+  transform: rotate(-35deg);
+  transform-origin: center;
+}
+
+.station-33 .speed-station-num {
+  font-family: var(--font-inter);
+  font-size: 8px;
+  font-weight: 600;
+  color: #8c857e;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+/* 45 RPM: Horizontal right arc (0 deg) */
+.station-45 {
+  left: 56px;
+  top: 25px;
+}
+
+.station-45 .speed-station-tick {
+  width: 6px;
+  height: 1px;
+  background-color: #9e968f;
+}
+
+.station-45 .speed-station-num {
+  font-family: var(--font-inter);
+  font-size: 8px;
+  font-weight: 600;
+  color: #8c857e;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.speed-dial-station.active .speed-station-num {
+  color: #f05523;
+  font-weight: 700;
+}
+
+.speed-dial-station.active .speed-station-tick {
+  background-color: #f05523;
+}
+
+/* Single Directional White Pointer Lever */
+.speed-pointer-rotator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.speed-pointer-lever {
+  position: absolute;
+  top: -2.25px;
+  left: -2px; /* starts at pivot center */
+  width: 25px; /* extends from center outward to circle rim */
+  height: 4.5px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 
+    0 2.5px 4.5px rgba(0, 0, 0, 0.28),
+    0 0.5px 1px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 1);
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+`;
 
 export const LPPlayer: React.FC<LPPlayerProps> = ({
   audioSrc = '/audio/ocean-bubbles.mp3',
@@ -160,6 +790,8 @@ export const LPPlayer: React.FC<LPPlayerProps> = ({
 
   return (
     <div className={`turntable-root ${className}`}>
+      {/* Self-contained encapsulated component styles */}
+      <style>{TURNTABLE_CSS}</style>
       {/* Hidden Native Audio Element */}
       <audio
         ref={audioRef}
